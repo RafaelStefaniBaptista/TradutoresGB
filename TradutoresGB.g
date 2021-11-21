@@ -1,4 +1,4 @@
-grammar gramatic;
+grammar TradutoresGB;
 
 options {
 	language=Java;
@@ -9,86 +9,92 @@ options {
 }
 
 @members {
-    HashMap<String, Double> memory = new HashMap<>();
+
+	void testMethod(org.antlr.runtime.Token token){
+		var text = token.getText();
+		var line = token.getLine();
+		var column = token.getCharPositionInLine();
+		System.out.println(text + " line:" + line + " column:" + column);
+	}
+
+	HashMap<String, Double> memory = new HashMap<>();
 }
 
-prog
-    :
-    stat+ EOF
-    ;
+prog: commands END_OF_FILE?;
 
-stat
-    :
-    comands
-    ; 
+commands: (command WS?)+;
 
-comands
-    :
-    (comand ';')+
-    ;
+command: assignment | iteration | conditional;
 
-comand
-    : 
-    assignment
-    | iteration
-    | conditional 
-    ;
+iteration: WHILE WS? relation WS? DO WS? commands ENDWHILE;
 
-iteration
-    :
-	WHILE relashion DO comands
-    ;
-
-assignment
-    :
-    VARIABLE ':=' expr 
-    { memory.put($VARIABLE.text, new Double($expr.value)); } 
-    { System.out.println("variable " + $VARIABLE.text + " = " + $expr.value + " insert in memory"); }
+assignment:
+    VARIABLE WS? ':=' WS? expr WS? ';'
+    { memory.put($VARIABLE.text, new Double($expr.value)); System.out.println("variable " + $VARIABLE.text + " = " + $expr.value + " insert in memory"); }
     ;
 
 conditional
     :
-	(IF relashion THEN comands) alternativa 
+	IF WS? relation WS? THEN WS? commands WS? alternativa? WS? ENDIF
 	;
 	
 alternativa
     :	
-	(ELSE comands)
+	ELSE WS? commands
 	;
-
+    
 expr returns [ double value ]
     :
-    ( CONSTANT { $value = Double.parseDouble($INT.text); } {System.out.println("read value constant: " + $value);}
-    | VARIABLE { $value = memory.getOrDefault($VARIABLE.text, 0.0); } {System.out.println("read memory variable: " + $value);} )
-    ( '+' {System.out.println("read: + ");} e = expr {$value += $e.value;} {System.out.println("Result of sum: " + $value);}
-    | '-' {System.out.println("read: - ");} e = expr {$value -= $e.value;} {System.out.println("Result of subtract: " + $value);}
-    | '*' {System.out.println("read: * ");} e = expr {$value *= $e.value;} {System.out.println("Result of multiply: " + $value);}
-    | '/' {System.out.println("read: / ");} e = expr {$value /= $e.value;} {System.out.println("Result of division: " + $value);}
-    |
-    )
-    | '(' e = expr {$value = $e.value;} ')'
+    expr_add
+    ;
+    
+expr_add returns [ double value ]
+    :
+    expr_mult
+    ( WS? '+' WS? e = expr_add {$value += $e.value;} {System.out.println("Result of sum: " + $value);}
+    | WS? '-' WS? e = expr_add {$value -= $e.value;} {System.out.println("Result of subtract: " + $value);}
+    )?
     ;
 
-relashion returns [ boolean r ]
+expr_mult returns [ double value ]
+    :
+    term
+    ( WS? '*' WS? e = expr_mult {$value *= $e.value;} {System.out.println("Result of multiply: " + $value);}
+    | WS? '/' WS? e = expr_mult {$value /= $e.value;} {System.out.println("Result of division: " + $value);}
+    )?
+    ;
+
+term  returns [ double value ]
+    : '(' WS? e = expr {$value = $e.value;} WS? ')'
+    |( CONSTANT { $value = Double.parseDouble($CONSTANT.text); testMethod($CONSTANT); } {System.out.println("read value constant: " + $value);}
+    | VARIABLE { $value = memory.getOrDefault($VARIABLE.text, 0.0); } {System.out.println("read memory variable: " + $value);} )
+    ;
+
+
+relation returns [ boolean r ]
     : 
     ( e = expr ) 
-    ( '='  {System.out.println("read expr relashion: = " );} d = expr {$r = $e.value == $d.value;} {System.out.println("Result expr relashion " + $e.value + " = "  + $d.value + " : " + $r);} 
-    | '<>' {System.out.println("read expr relashion: <> ");} d = expr {$r = $e.value != $d.value;} {System.out.println("Result expr relashion " + $e.value + " <> " + $d.value + " : " + $r);} 
-    | '<'  {System.out.println("read expr relashion: < " );} d = expr {$r = $e.value <  $d.value;} {System.out.println("Result expr relashion " + $e.value + " < "  + $d.value + " : " + $r);}
-    | '>'  {System.out.println("read expr relashion: > " );} d = expr {$r = $e.value >  $d.value;} {System.out.println("Result expr relashion " + $e.value + " > "  + $d.value + " : " + $r);} 
-    | '<=' {System.out.println("read expr relashion: <= ");} d = expr {$r = $e.value <= $d.value;} {System.out.println("Result expr relashion " + $e.value + " <= " + $d.value + " : " + $r);}
-    | '>=' {System.out.println("read expr relashion: >= ");} d = expr {$r = $e.value >= $d.value;} {System.out.println("Result expr relashion " + $e.value + " >= " + $d.value + " : " + $r);}
+    ( '='  d = expr {$r = $e.value == $d.value;} {System.out.println("Result expr relashion " + $e.value + " = "  + $d.value + " : " + $r);} 
+    | '<>' d = expr {$r = $e.value != $d.value;} {System.out.println("Result expr relashion " + $e.value + " <> " + $d.value + " : " + $r);} 
+    | '<'  d = expr {$r = $e.value <  $d.value;} {System.out.println("Result expr relashion " + $e.value + " < "  + $d.value + " : " + $r);}
+    | '>'  d = expr {$r = $e.value >  $d.value;} {System.out.println("Result expr relashion " + $e.value + " > "  + $d.value + " : " + $r);} 
+    | '<=' d = expr {$r = $e.value <= $d.value;} {System.out.println("Result expr relashion " + $e.value + " <= " + $d.value + " : " + $r);}
+    | '>=' d = expr {$r = $e.value >= $d.value;} {System.out.println("Result expr relashion " + $e.value + " >= " + $d.value + " : " + $r);}
     )   
     ;
 
-DO   : 'do';
-ELSE : 'else';
 IF   : 'if';
-WHILE: 'while';
 THEN : 'then';
-END  : 'end';
+ELSE : 'else';
+ENDIF 	: 'endif';
 
-CONSTANT:	('0'..'9')+;
-VARIABLE:	('A'..'Z' | 'a'..'z')+;
+WHILE: 'while';
+DO   : 'do';
+ENDWHILE  : 'endwhile';
+
+CONSTANT: '0' | (('1'..'9') ('0'..'9')*);
+VARIABLE: ('A'..'Z' | 'a'..'z')+ ('A'..'Z' | 'a'..'z' | '0'..'9')*;
 
 WS   : (' '|'\n'|'\r'|'\t')+;
+
+END_OF_FILE   : EOF {skip();};
