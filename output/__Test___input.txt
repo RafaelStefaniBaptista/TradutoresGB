@@ -1,1 +1,14 @@
-b := (1+2+3)+4*5+6+7;
+b := 1 + 4 / 2 + 3;
+c := 100;
+a := b + (c + 1) - v;
+if a=1 then
+    if b=0 then
+    a:=0;
+    else b:=1;
+endif
+endif
+j := a+b;
+while a=1 do
+    f:=9;
+    g:=10;
+endwhile

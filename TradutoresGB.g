@@ -10,11 +10,11 @@ options {
 
 @members {
 
-	void testMethod(org.antlr.runtime.Token token){
+	void testMethod(String message, org.antlr.runtime.Token token){
 		var text = token.getText();
 		var line = token.getLine();
 		var column = token.getCharPositionInLine();
-		System.out.println(text + " line:" + line + " column:" + column);
+		System.out.println(message + " token:" + text + " line:" + line + " column:" + column);
 	}
 
 	HashMap<String, Double> memory = new HashMap<>();
@@ -36,40 +36,44 @@ conditional:
 
 alternativa: ELSE WS? commands;
 
-expr
-	returns[ double value ]: expr_add;
+expr returns[ double value ]: e = expr_add {$value = $e.value;};
 
-expr_add
-	returns[ double value ]:
-	expr_mult (
-		WS? '+' WS? e = expr_add {$value += $e.value;} {System.out.println("Result of sum: " + $value);}
-		| WS? '-' WS? e = expr_add {$value -= $e.value;} {System.out.println("Result of subtract: " + $value);}
+expr_add returns[ double value ]:
+	e = expr_mult {$value = $e.value;} (
+		WS? '+' WS? d = expr_add {$value += $d.value;} {System.out.println("Result of " + $e.value + " + " + $d.value + ": " + $value);}
+		| WS? '-' WS? d = expr_add {$value -= $d.value;} {System.out.println("Result of " + $e.value + " - " + $d.value + ": " + $value);}
 	)?;
 
-expr_mult
-	returns[ double value ]:
-	term (
-		WS? '*' WS? e = expr_mult {$value *= $e.value;} {System.out.println("Result of multiply: " + $value);}
-		| WS? '/' WS? e = expr_mult {$value /= $e.value;} {System.out.println("Result of division: " + $value);}
+expr_mult returns[ double value ]:
+	e = term {$value = $e.value;} (
+		WS? '*' WS? d = expr_mult {$value *= $d.value;} {System.out.println("Result of " + $e.value + " * " + $d.value + ": " + $value);}
+		| WS? '/' WS? d = expr_mult {$value /= $d.value;} {System.out.println("Result of " + $e.value + " / " + $d.value + ": " + $value);}
 	)?;
 
-term
-	returns[ double value ]:
+term returns[ double value ]:
 	'(' WS? e = expr {$value = $e.value;} WS? ')'
 	| (
-		CONSTANT { $value = Double.parseDouble($CONSTANT.text); testMethod($CONSTANT); } {System.out.println("read value constant: " + $value);}
-		| VARIABLE { $value = memory.getOrDefault($VARIABLE.text, 0.0); } {System.out.println("read memory variable: " + $value);}
+		CONSTANT { $value = Double.parseDouble($CONSTANT.text); } {System.out.println("read value constant: " + $value);}
+		| v = VARIABLE { 
+			var memo = memory.get($v.text);
+			if(memo == null) {
+				$value = 0.0;
+				testMethod("[ERRO SEMÂNTICO: variável não declarada]", $v);
+			} else {
+				$value = memo;
+				System.out.println("read " + $v.text + " from memory: " + $value);
+			}
+		}
 	);
 
-relation
-	returns[ boolean r ]:
-	(e = expr) (
-		'=' d = expr {$r = $e.value == $d.value;} {System.out.println("Result expr relashion " + $e.value + " = "  + $d.value + " : " + $r);}
-		| '<>' d = expr {$r = $e.value != $d.value;} {System.out.println("Result expr relashion " + $e.value + " <> " + $d.value + " : " + $r);}
-		| '<' d = expr {$r = $e.value <  $d.value;} {System.out.println("Result expr relashion " + $e.value + " < "  + $d.value + " : " + $r);}
-		| '>' d = expr {$r = $e.value >  $d.value;} {System.out.println("Result expr relashion " + $e.value + " > "  + $d.value + " : " + $r);}
-		| '<=' d = expr {$r = $e.value <= $d.value;} {System.out.println("Result expr relashion " + $e.value + " <= " + $d.value + " : " + $r);}
-		| '>=' d = expr {$r = $e.value >= $d.value;} {System.out.println("Result expr relashion " + $e.value + " >= " + $d.value + " : " + $r);}
+relation returns[ boolean r ]:
+	(e = expr) WS? (
+		'=' WS? d = 	expr {$r = $e.value == $d.value;} {System.out.println("Result expr relashion " + $e.value + " = "  + $d.value + " : " + $r);}
+		| '<>' WS? d = 	expr {$r = $e.value != $d.value;} {System.out.println("Result expr relashion " + $e.value + " <> " + $d.value + " : " + $r);}
+		| '<' WS? d = 	expr {$r = $e.value <  $d.value;} {System.out.println("Result expr relashion " + $e.value + " < "  + $d.value + " : " + $r);}
+		| '>' WS? d = 	expr {$r = $e.value >  $d.value;} {System.out.println("Result expr relashion " + $e.value + " > "  + $d.value + " : " + $r);}
+		| '<=' WS? d = 	expr {$r = $e.value <= $d.value;} {System.out.println("Result expr relashion " + $e.value + " <= " + $d.value + " : " + $r);}
+		| '>=' WS? d = 	expr {$r = $e.value >= $d.value;} {System.out.println("Result expr relashion " + $e.value + " >= " + $d.value + " : " + $r);}
 	);
 
 IF: 'if';
@@ -88,6 +92,6 @@ VARIABLE: ('A' ..'Z' | 'a' ..'z')+ (
 		| '0' ..'9'
 	)*;
 
-WS: (' ' | '\n' | '\r' | '\t')+;
+WS: (' ' | '\n' | '\r' | '\t')+ {skip();};
 
 END_OF_FILE: EOF {skip();};
