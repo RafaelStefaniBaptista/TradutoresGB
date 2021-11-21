@@ -10,7 +10,7 @@ options {
 
 @members {
 
-	void testMethod(String message, org.antlr.runtime.Token token){
+	void logError(String message, org.antlr.runtime.Token token){
 		var text = token.getText();
 		var line = token.getLine();
 		var column = token.getCharPositionInLine();
@@ -58,7 +58,7 @@ term returns[ double value ]:
 			var memo = memory.get($v.text);
 			if(memo == null) {
 				$value = 0.0;
-				testMethod("[ERRO SEMÂNTICO: variável não declarada]", $v);
+				logError("[ERRO SEMÂNTICO: variável não declarada]", $v);
 			} else {
 				$value = memo;
 				System.out.println("read " + $v.text + " from memory: " + $value);
@@ -92,6 +92,6 @@ VARIABLE: ('A' ..'Z' | 'a' ..'z')+ (
 		| '0' ..'9'
 	)*;
 
-WS: (' ' | '\n' | '\r' | '\t')+ {skip();};
+WS: (' ' | '\n' | '\r' | '\t')+;
 
 END_OF_FILE: EOF {skip();};
